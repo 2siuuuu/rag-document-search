@@ -302,7 +302,33 @@ const PATTERNS = {
   ]
 };
 
-// ===== extractors 제거 (processMessage 내부에서 localExtractors 사용) =====
+// ===== extractors (호환성용, 실제로는 사용되지 않음) =====
+const extractors = {
+  extractFileName: (message, selectedFiles = []) => {
+    debugLog('stage', '⚠️ extractFileName 호출됨 (사용되지 않음)', { message, selectedFiles });
+    return null;
+  },
+  
+  extractPath: (message, currentPath = '/') => {
+    debugLog('stage', '⚠️ extractPath 호출됨 (사용되지 않음)', { message, currentPath });
+    return currentPath;
+  },
+  
+  extractNewFolderName: (message) => {
+    debugLog('stage', '⚠️ extractNewFolderName 호출됨 (사용되지 않음)', { message });
+    return null;
+  },
+
+  extractNewName: (message) => {
+    debugLog('stage', '⚠️ extractNewName 호출됨 (사용되지 않음)', { message });
+    return null;
+  },
+
+  getTargetFiles: (message, selectedFiles = [], allFiles = []) => {
+    debugLog('stage', '⚠️ getTargetFiles 호출됨 (사용되지 않음)', { message, selectedFilesCount: selectedFiles.length });
+    return [];
+  }
+};
 
 // ===== 수정된 CommandProcessor (백엔드 우선, 폴백 제거) =====
 export const CommandProcessor = {
