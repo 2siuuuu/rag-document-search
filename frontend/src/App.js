@@ -68,10 +68,14 @@ function AppContent() {
 
   // 컴포넌트 마운트 시 로그인 상태 확인
   useEffect(() => {
-    // 토큰이 있으면 사용자 정보 가져오기
     const token = localStorage.getItem("token");
     if (token) {
+      console.log("🔑 저장된 토큰 발견 - 사용자 정보 가져오기");
       fetchUserInfo(token);
+    } else {
+      console.log("🚫 토큰 없음 - 로그인 필요");
+      setIsAuthenticated(false);
+      setUser(null);
     }
   }, []);
 
@@ -410,69 +414,101 @@ function AppContent() {
   // 사용자 정보 가져오기
   const fetchUserInfo = async (token) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/auth/me`, {
+      console.log("👤 사용자 정보 가져오기 시작");
+      
+      // 인증 상태를 먼저 설정 (토큰이 있으면 일단 인증된 것으로 간주)
+      setIsAuthenticated(true);
+      
+      const response = await axios.get(`${API_BASE_URL}/user/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setUser(response.data);
-      setIsAuthenticated(true);
+
+      if (response.data) {
+        setUser(response.data);
+        console.log("✅ 사용자 인증 완료:", response.data.username || response.data.email);
+      }
     } catch (error) {
-      console.error("Error fetching user info:", error);
+      console.error("❌ 사용자 정보 가져오기 실패:", error);
+      
+      // 토큰이 유효하지 않으면 인증 상태 초기화
       localStorage.removeItem("token");
+      setIsAuthenticated(false);
+      setUser(null);
+      
+      // 에러 타입에 따른 로그
+      if (error.response) {
+        console.log(`서버 응답 오류: ${error.response.status}`);
+        if (error.response.status === 401) {
+          console.log("토큰 만료 또는 유효하지 않음");
+        }
+      } else if (error.request) {
+        console.log("네트워크 오류: 서버에 연결할 수 없음");
+      }
     }
   };
 
   // 디렉토리 구조 가져오기 - t를 의존성에서 제거하고 내부에서 직접 사용
   const fetchDirectories = useCallback(async () => {
     try {
+      console.log("📂 디렉토리 구조 가져오기 시작");
       setIsLoading(true);
       const token = localStorage.getItem("token");
-      // 백엔드에서 디렉토리 구조 가져오기
-      const response = await axios.get(`${API_BASE_URL}/documents/structure`, {
+
+      const response = await axios.get(`${API_BASE_URL}/directories`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       if (response.data && response.data.directories) {
-        // 루트 디렉토리가 있는지 확인
-        const directories = response.data.directories;
-        const hasRootDir = directories.some((dir) => dir.path === "/");
-
-        // 이름 순으로 정렬
-        directories.sort((a, b) => {
+        let directoriesData = [...response.data.directories];
+        
+        // 디렉토리 정렬
+        directoriesData.sort((a, b) => {
           // 루트 디렉토리는 항상 첫 번째
           if (a.path === "/") return -1;
           if (b.path === "/") return 1;
-
           return a.name.localeCompare(b.name, "ko");
         });
 
         // 루트 디렉토리가 없으면 추가
+        const hasRootDir = directoriesData.some(dir => dir.path === "/");
         if (!hasRootDir) {
-          const updatedDirectories = [
-            { id: "home", name: "Home", path: "/" }, // 일단 하드코딩으로 변경
-            ...directories,
+          directoriesData = [
+            { id: "home", name: "Home", path: "/" },
+            ...directoriesData,
           ];
-          setDirectories(updatedDirectories);
-        } else {
-          setDirectories(directories);
+          console.log("🏠 루트 디렉토리 추가됨");
         }
 
-        console.log("디렉토리 구조 가져옴:", directories);
+        setDirectories(directoriesData);
+        console.log(`✅ 디렉토리 ${directoriesData.length}개 로드 완료:`, 
+          directoriesData.map(d => d.path));
+        
       } else {
+        console.log("⚠️ 서버에서 디렉토리 데이터 없음 - 기본 루트 디렉토리 생성");
         // 기본 홈 디렉토리 설정
-        setDirectories([{ id: "home", name: "Home", path: "/" }]); // 일단 하드코딩으로 변경
+        setDirectories([{ id: "home", name: "Home", path: "/" }]);
       }
     } catch (error) {
-      console.error("Error fetching directories:", error);
-      // 기본 홈 디렉토리만 제공하고 나머지는 비움
-      setDirectories([{ id: "home", name: "Home", path: "/" }]); // 일단 하드코딩으로 변경
+      console.error("❌ 디렉토리 가져오기 실패:", error);
+      
+      // 에러 발생 시에도 기본 홈 디렉토리는 제공
+      setDirectories([{ id: "home", name: "Home", path: "/" }]);
+      
+      // 에러 타입별 로그
+      if (error.response) {
+        console.log(`서버 오류: ${error.response.status}`);
+      } else if (error.request) {
+        console.log("네트워크 오류: 디렉토리 API 연결 실패");
+      }
     } finally {
       setIsLoading(false);
+      console.log("📂 디렉토리 가져오기 프로세스 완료");
     }
-  }, []); // 의존성에서 t 제거
+  }, []);
 
   // 문서 목록 가져오기
   const fetchDocuments = useCallback(async () => {
@@ -486,41 +522,12 @@ function AppContent() {
       // 루트 경로('/')일 경우, 백엔드 API가 빈 문자열을 예상할 수 있으므로 처리
       if (currentPath === "/") {
         pathParam = "";
-        console.log("루트 경로 문서 요청 (빈 문자열로 변환):", pathParam);
-
-        // 루트 경로인 경우 API 요청 대신 직계 하위 폴더를, 디렉토리 정보에서 찾아 표시
-        if (directories && directories.length > 0) {
-          // 루트 경로의 직계 자식 폴더 찾기
-          const rootSubfolders = directories
-            .filter((dir) => {
-              if (dir.path === "/") return false;
-              const parts = dir.path.split("/").filter(Boolean);
-              return parts.length === 1;
-            })
-            .map((dir) => ({
-              id: dir.id,
-              name: dir.name,
-              path: dir.path,
-              isDirectory: true,
-              type: "folder",
-            }));
-
-          console.log(
-            `루트 경로에서 ${rootSubfolders.length}개 폴더 찾음:`,
-            rootSubfolders
-          );
-
-          // API 호출 없이 찾은 폴더들을 files 상태로 설정
-          if (rootSubfolders.length > 0) {
-            setFiles(rootSubfolders);
-            setIsLoading(false);
-            return;
-          }
-        }
+        console.log("루트 경로 문서 요청:", pathParam);
       }
 
       console.log(`문서 요청 경로: ${pathParam}`);
 
+      // 🔄 항상 API 호출을 실행 (directories 상태에 의존하지 않음)
       const response = await axios.get(`${API_BASE_URL}/documents`, {
         params: { path: pathParam },
         headers: {
@@ -557,87 +564,176 @@ function AppContent() {
         setFiles(sortedFiles);
       } else {
         console.log(`경로 '${currentPath}'에서 항목 없음`);
-
-        // API 응답이 없고 루트 경로일 때 대체 로직
-        if (currentPath === "/" && directories && directories.length > 0) {
-          const rootSubfolders = directories
-            .filter((dir) => {
-              if (dir.path === "/") return false;
-              const parts = dir.path.split("/").filter(Boolean);
-              return parts.length === 1;
-            })
-            .map((dir) => ({
-              id: dir.id,
-              name: dir.name,
-              path: dir.path,
-              isDirectory: true,
-              type: "folder",
-            }));
-
-          console.log(
-            `API 응답 없음, 폴더 구조에서 ${rootSubfolders.length}개 폴더 찾음:`,
-            rootSubfolders
-          );
-
-          if (rootSubfolders.length > 0) {
-            setFiles(rootSubfolders);
-          } else {
-            setFiles([]);
-          }
-        } else {
-          setFiles([]);
-        }
+        setFiles([]);
       }
     } catch (error) {
       console.error("Error fetching documents:", error);
       console.log("오류 발생:", error.message);
-
-      // 오류 발생 시 루트 경로일 때 대체 로직
-      if (currentPath === "/" && directories && directories.length > 0) {
-        const rootSubfolders = directories
-          .filter((dir) => {
-            if (dir.path === "/") return false;
-            const parts = dir.path.split("/").filter(Boolean);
-            return parts.length === 1;
-          })
-          .map((dir) => ({
-            id: dir.id,
-            name: dir.name,
-            path: dir.path,
-            isDirectory: true,
-            type: "folder",
-          }));
-
-        console.log(
-          `API 오류 발생, 폴더 구조에서 ${rootSubfolders.length}개 폴더 찾음`
-        );
-
-        if (rootSubfolders.length > 0) {
-          setFiles(rootSubfolders);
-        } else {
-          setFiles([]);
-        }
-      } else {
-        setFiles([]);
-      }
+      setFiles([]);
     } finally {
       setIsLoading(false);
     }
-  }, [currentPath, directories]);
+  }, [currentPath]);
 
   // 인증 시 디렉토리 및 문서 목록 가져오기
   useEffect(() => {
     if (isAuthenticated) {
+      console.log("🔐 인증됨 - 디렉토리 가져오기 시작");
       fetchDirectories();
     }
   }, [isAuthenticated, fetchDirectories]);
 
   // 현재 경로가 변경될 때 해당 경로의 문서 가져오기
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && currentPath) {
+      console.log(`📁 경로: ${currentPath} - 문서 가져오기 시작`);
       fetchDocuments();
     }
   }, [isAuthenticated, currentPath, fetchDocuments]);
+
+  // 새로고침 감지 및 상태 로깅 (디버깅용)
+  useEffect(() => {
+    console.log("🔄 === 앱 새로고침/마운트 감지 ===");
+    console.log("현재 상태:", {
+      isAuthenticated,
+      currentPath,
+      directoriesCount: directories.length,
+      filesCount: files.length,
+      hasToken: !!localStorage.getItem("token")
+    });
+    
+    // 토큰이 있으면 즉시 로그 출력
+    const token = localStorage.getItem("token");
+    if (token) {
+      console.log("✅ 토큰 존재 - 인증 프로세스 시작");
+    } else {
+      console.log("❌ 토큰 없음 - 로그인 필요");
+    }
+  }, [isAuthenticated, currentPath, directories.length, files.length]);
+
+  // 1️⃣ 상태 변화 감지 useEffect 추가 (디버깅용)
+  useEffect(() => {
+    console.log("🔄 상태 변화 감지:", {
+      isAuthenticated,
+      currentPath,
+      directoriesCount: directories.length,
+      filesCount: files.length,
+      isLoading
+    });
+  }, [isAuthenticated, currentPath, directories.length, files.length, isLoading]);
+
+  // 2️⃣ API 호출 실패 시 재시도 로직 (선택사항)
+  const retryFetchDocuments = useCallback(async (retryCount = 0) => {
+    const maxRetries = 2;
+    
+    try {
+      await fetchDocuments();
+    } catch (error) {
+      if (retryCount < maxRetries) {
+        console.log(`📄 문서 가져오기 재시도 ${retryCount + 1}/${maxRetries}`);
+        setTimeout(() => {
+          retryFetchDocuments(retryCount + 1);
+        }, 1000 * (retryCount + 1)); // 1초, 2초 후 재시도
+      } else {
+        console.error("❌ 문서 가져오기 최종 실패");
+        showNotification("문서를 불러오는데 실패했습니다. 새로고침을 시도해주세요.");
+      }
+    }
+  }, [fetchDocuments]);
+
+  // 3️⃣ 네트워크 상태 확인 함수
+  const checkNetworkAndRefresh = useCallback(async () => {
+    try {
+      console.log("🌐 네트워크 상태 확인 중...");
+      
+      // 간단한 핑 테스트
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        console.log("✅ 네트워크 연결 정상 - 데이터 새로고침");
+        if (isAuthenticated) {
+          await fetchDirectories();
+          await fetchDocuments();
+        }
+      } else {
+        console.log("⚠️ 서버 응답 이상:", response.status);
+      }
+    } catch (error) {
+      console.error("❌ 네트워크 확인 실패:", error);
+    }
+  }, [isAuthenticated, fetchDirectories, fetchDocuments]);
+
+  // 4️⃣ 브라우저 온라인/오프라인 이벤트 처리
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log("🌐 네트워크 연결 복구됨");
+      if (isAuthenticated) {
+        checkNetworkAndRefresh();
+      }
+    };
+    
+    const handleOffline = () => {
+      console.log("📶 네트워크 연결 끊어짐");
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [isAuthenticated, checkNetworkAndRefresh]);
+
+  // 5️⃣ 개발자 도구에서 수동으로 호출할 수 있는 디버그 함수들
+  useEffect(() => {
+    // 개발 환경에서만 글로벌 디버그 함수 등록
+    if (process.env.NODE_ENV === 'development') {
+      window.debugApp = {
+        refreshData: () => {
+          console.log("🔄 수동 데이터 새로고침 실행");
+          if (isAuthenticated) {
+            fetchDirectories();
+            fetchDocuments();
+          }
+        },
+        checkAuth: () => {
+          console.log("🔐 인증 상태:", {
+            isAuthenticated,
+            hasToken: !!localStorage.getItem('token'),
+            user: user?.username || user?.email
+          });
+        },
+        clearCache: () => {
+          console.log("🗑️ 로컬 스토리지 캐시 삭제");
+          localStorage.removeItem('token');
+          setIsAuthenticated(false);
+          setUser(null);
+          setFiles([]);
+          setDirectories([]);
+        }
+      };
+      
+      console.log("🛠️ 디버그 함수 등록됨: window.debugApp");
+    }
+  }, [isAuthenticated, user, fetchDirectories, fetchDocuments]);
+
+  // 6️⃣ 에러 경계 역할을 하는 에러 핸들러
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error('🚨 처리되지 않은 Promise 거부:', event.reason);
+    
+    // API 관련 에러인 경우 사용자에게 알림
+    if (event.reason?.message?.includes('API') || 
+        event.reason?.message?.includes('fetch') ||
+        event.reason?.response) {
+      showNotification('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
+  });
 
   // 파일 업로드 처리
   const handleAddFile = async (
@@ -1200,7 +1296,11 @@ function AppContent() {
           directories={directories}
           currentPath={currentPath}
           setCurrentPath={setCurrentPath}
-          onRefresh={fetchDirectories}
+          onRefresh={() => {
+            console.log("🔄 사이드바에서 새로고침 요청됨");
+            fetchDirectories();
+            fetchDocuments();
+          }}
           closeSidebar={closeSidebar}
         />
         
