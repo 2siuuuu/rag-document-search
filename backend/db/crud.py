@@ -88,7 +88,12 @@ def get_documents_by_user_id(db: Session, user_id: int):
     return db.query(models.Document).filter(models.Document.user_id == user_id).all()
 
 # 문서 청크를 저장하는 함수
-def add_document_chunk(db: Session, document_id: int, content: str, embedding=None):
+def add_document_chunk(db: Session, document_id: int, content: str, user_id: int, embedding=None):
+    # 먼저 해당 document가 현재 사용자의 것인지 확인
+    document = db.query(models.Document).filter(models.Document.id == document_id, models.Document.user_id == user_id).first()
+    if not document:
+        raise ValueError("Document not found or access denied")
+    
     db_chunk = models.DocumentChunk(
         document_id=document_id,
         content=content,
@@ -100,7 +105,12 @@ def add_document_chunk(db: Session, document_id: int, content: str, embedding=No
     return db_chunk
 
 # 문서의 id로 문서 청크를 가져오는 함수
-def get_document_chunks_by_document_id(db: Session, document_id: int):
+def get_document_chunks_by_document_id(db: Session, document_id: int, user_id: int):
+    # 먼저 해당 document가 현재 사용자의 것인지 확인
+    document = db.query(models.Document).filter(models.Document.id == document_id, models.Document.user_id == user_id).first()
+    if not document:
+        return []  # 접근 권한이 없으면 빈 리스트 반환
+    
     return db.query(models.DocumentChunk).filter(models.DocumentChunk.document_id == document_id).all()
 
 # 디렉토리 관련 CRUD
@@ -190,6 +200,11 @@ def delete_directory_by_id(db: Session, directory_id: str, user_id: int):
 def delete_document_by_id(db: Session, document_id: int, user_id: int):
     """파일 id로 테이블에서 파일 정보를 document_chunks테이블, documents테이블, directories테이블 순으로 삭제한다."""
     try:
+        # 먼저 해당 document가 현재 사용자의 것인지 확인
+        document = db.query(models.Document).filter(models.Document.id == document_id, models.Document.user_id == user_id).first()
+        if not document:
+            raise ValueError("Document not found or access denied")
+        
         # 개별 DELETE 문을 실행
         db.execute(
             text("DELETE FROM document_chunks WHERE document_id = :doc_id"),
