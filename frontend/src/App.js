@@ -609,7 +609,7 @@ function AppContent() {
     } else {
       console.log("❌ 토큰 없음 - 로그인 필요");
     }
-  }, []); // 마운트시에만 실행
+  }, [isAuthenticated, currentPath, directories.length, files.length]);
 
   // 1️⃣ 상태 변화 감지 useEffect 추가 (디버깅용)
   useEffect(() => {
