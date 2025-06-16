@@ -18,3 +18,11 @@ def read_users(
     """사용자 목록 조회 엔드포인트"""
     users = get_users(db, skip=skip, limit=limit)
     return {"users": users} 
+
+
+@router.get("/profile")
+def read_users(
+    current_user: User = Depends(get_current_user)
+):
+    """현재 사용자 정보 조회 엔드포인트"""
+    return current_user     
