@@ -273,7 +273,7 @@ async def get_filesystem_structure(
         # 존재하면 아무 작업도 하지 않는다.
         if not crud.get_directory_by_id(db, "root", user_id):
             # 존재하지 않으면 루트 디렉토리 생성
-            crud.create_directory(db, "root", "/", True, None, datetime.now())
+            crud.create_directory(db, "root", "Home", "/", True, None, datetime.now(), user_id)
 
         # 디렉토리만 필터링. 디렉토리 구조만 보내면 됨.
         directories = crud.get_only_directory(db, user_id)
@@ -704,7 +704,7 @@ async def process_directory_operations(operations, user_id: int, db):
         
         if reserved_item_id:
             # 아이템의 디렉토리 여부
-            item_is_directory = crud.get_file_is_directory_by_id(db, reserved_item_id)
+            item_is_directory = crud.get_file_is_directory_by_id(db, reserved_item_id, user_id)
 
 
         try:
@@ -760,13 +760,13 @@ async def process_directory_operations(operations, user_id: int, db):
             elif op_type == "move":
                 new_path = reserved_path
                 # target item의 parent_id 가져오기
-                target_item_parent_id = crud.get_parent_id_by_id(db, reserved_item_id)
+                target_item_parent_id = crud.get_parent_id_by_id(db, reserved_item_id, user_id)
                 # target item의 기존 경로 가져오기
                 target_item_path = crud.get_file_path_by_id(db, reserved_item_id, user_id)
                 # target item의 기존 이름 가져오기
                 target_item_name = crud.get_file_name_by_id(db, reserved_item_id, user_id)
                 # target item의 타입 가져오기
-                target_item_type = crud.get_file_is_directory_by_id(db, reserved_item_id)
+                target_item_type = crud.get_file_is_directory_by_id(db, reserved_item_id, user_id)
                 # 목적지의 id값 가져오기
                 destination_id = crud.get_directory_id_by_path(db, new_path, user_id)
 
@@ -781,11 +781,11 @@ async def process_directory_operations(operations, user_id: int, db):
                         # target item의 새로운 경로 준비
                         target_new_path = new_path + target_item_path  
                         # target item이 디렉토리인 경우 하위 아이템이 존재한다면 해당 item의 레코드를 반환
-                        target_item_children = crud.get_directory_by_parent_id(db, reserved_item_id)
+                        target_item_children = crud.get_directory_by_parent_id(db, reserved_item_id, user_id)
                         if target_item_children:
                             # 하위 아이템이 존재하는 경우
                             # 하위 아이템이 존재하는 경우에는 sql 스크립트를 실행. (자식 아이템까지 재귀적으로 처리됨.)
-                            crud.update_directory_with_sql_file_safe(db, reserved_item_id, target_item_path, target_new_path, target_new_parent_id)
+                            crud.update_directory_with_sql_file_safe(db, reserved_item_id, target_item_path, target_new_path, target_new_parent_id, user_id)
                             results.append({
                                             "operation": "move",
                                             "type": "directory" if target_item_type else "file",
@@ -797,7 +797,7 @@ async def process_directory_operations(operations, user_id: int, db):
                         else:
                             # 하위 아이템이 존재하지 않는 경우
                             # 디렉토리 경로 및 부모 id 업데이트
-                            crud.update_directory_path_and_parent(db, reserved_item_id, target_new_path, target_new_parent_id)
+                            crud.update_directory_path_and_parent(db, reserved_item_id, target_new_path, target_new_parent_id, user_id)
                             results.append({
                                             "operation": "move",
                                             "type": "directory" if target_item_type else "file",
@@ -822,7 +822,7 @@ async def process_directory_operations(operations, user_id: int, db):
                 else:
                     # target이 root디렉토리에 존재하지 않는 경우
                     # target item이 디렉토리인 경우 하위 아이템이 존재한다면 해당 item의 레코드를 반환
-                    target_item_children = crud.get_directory_by_parent_id(db, reserved_item_id)
+                    target_item_children = crud.get_directory_by_parent_id(db, reserved_item_id, user_id)
                     # 부모 아이템의 path
                     parent_item_path = crud.get_file_path_by_id(db, target_item_parent_id, user_id)                    
                     if new_path != "/":
@@ -833,7 +833,7 @@ async def process_directory_operations(operations, user_id: int, db):
                             target_new_path = new_path + target_item_path.replace(parent_item_path, "")
                             # 디렉토리 경로 및 부모 id 업데이트
                             # 하위 아이템이 존재하는 경우에는 sql 스크립트를 실행. (자식 아이템까지 재귀적으로 처리됨.)
-                            crud.update_directory_with_sql_file_safe(db, reserved_item_id, target_item_path, target_new_path, target_new_parent_id)
+                            crud.update_directory_with_sql_file_safe(db, reserved_item_id, target_item_path, target_new_path, target_new_parent_id, user_id)
                             results.append({
                                             "operation": "move",
                                             "type": "directory" if target_item_type else "file",
@@ -847,7 +847,7 @@ async def process_directory_operations(operations, user_id: int, db):
                             # target item의 새로운 경로 준비
                             target_new_path = new_path + '/' + target_item_name
                             # 디렉토리 경로 및 부모 id 업데이트
-                            crud.update_directory_path_and_parent(db, reserved_item_id, target_new_path, target_new_parent_id)
+                            crud.update_directory_path_and_parent(db, reserved_item_id, target_new_path, target_new_parent_id, user_id)
                             results.append({
                                             "operation": "move",
                                             "type": "directory" if target_item_type else "file",
@@ -864,7 +864,7 @@ async def process_directory_operations(operations, user_id: int, db):
                             target_new_path = target_item_path.replace(parent_item_path, "")
                             # 디렉토리 경로 및 부모 id 업데이트
                             # 하위 아이템이 존재하는 경우에는 sql 스크립트를 실행. (자식 아이템까지 재귀적으로 처리됨.)
-                            crud.update_directory_with_sql_file_safe(db, reserved_item_id, target_item_path, target_new_path, target_new_parent_id)                            
+                            crud.update_directory_with_sql_file_safe(db, reserved_item_id, target_item_path, target_new_path, target_new_parent_id, user_id)                            
                             results.append({
                                             "operation": "move",
                                             "type": "directory" if target_item_type else "file",
@@ -878,7 +878,7 @@ async def process_directory_operations(operations, user_id: int, db):
                             # target item의 새로운 경로 준비
                             target_new_path = new_path + target_item_name
                             # 디렉토리 경로 및 부모 id 업데이트
-                            crud.update_directory_path_and_parent(db, reserved_item_id, target_new_path, target_new_parent_id)
+                            crud.update_directory_path_and_parent(db, reserved_item_id, target_new_path, target_new_parent_id, user_id)
                             results.append({
                                             "operation": "move",
                                             "type": "directory" if target_item_type else "file",
@@ -891,17 +891,17 @@ async def process_directory_operations(operations, user_id: int, db):
             # 항목 삭제
             elif op_type == "delete":
                 
-                item_is_directory = crud.get_file_is_directory_by_id(db, reserved_item_id)
+                item_is_directory = crud.get_file_is_directory_by_id(db, reserved_item_id, user_id)
                 # 항목의 이름과 경로를 가져오기
                 item_name = crud.get_file_name_by_id(db, reserved_item_id, user_id)
                 item_path = crud.get_file_path_by_id(db, reserved_item_id, user_id)
                 # 자식이 포함되어 있는지 여부 확인을 위한 조사.
-                item_has_children = crud.get_directory_by_parent_id(db, reserved_item_id)
+                item_has_children = crud.get_directory_by_parent_id(db, reserved_item_id, user_id)
 
                 if item_is_directory:# 디렉토리인 경우
                     if item_has_children:# 자식이 존재할 경우
                         # 자식 중 파일들의 리스트를 가져온다.
-                        child_file_ids = crud.get_child_file_ids(db, reserved_item_id)
+                        child_file_ids = crud.get_child_file_ids(db, reserved_item_id, user_id)
                         
                         for file_id in child_file_ids:
                             # 파일의 기존 이름 가져오기
@@ -934,7 +934,7 @@ async def process_directory_operations(operations, user_id: int, db):
 
 
                 # 아이템의 자식포함 여부
-                item_has_children = crud.get_directory_by_parent_id(db, reserved_item_id)
+                item_has_children = crud.get_directory_by_parent_id(db, reserved_item_id, user_id)
                 # 아이템의 기존 이름 가져오기
                 target_item_original_name = crud.get_file_name_by_id(db, reserved_item_id, user_id)
                 # target item의 기존 경로 가져오기
@@ -1023,7 +1023,7 @@ async def process_directory_operations(operations, user_id: int, db):
                 target_destination_path = reserved_path
 
                 # 아이템의 디렉토리 여부 가져오기.
-                item_is_directory = crud.get_file_is_directory_by_id(db, target_item_id)
+                item_is_directory = crud.get_file_is_directory_by_id(db, target_item_id, user_id)
                 # target item의 기존 경로 가져오기
                 target_item_original_path = crud.get_file_path_by_id(db, target_item_id, user_id)
                 # 아이템의 기존 이름 가져오기
@@ -1031,7 +1031,7 @@ async def process_directory_operations(operations, user_id: int, db):
                 # 파일이 저장되어 있는 디렉토리 id 가져오기
                 file_parent_id = crud.get_parent_id_by_id(db, target_item_id)
                 # 아이템에게 자식이 있는지 여부
-                item_has_children = crud.get_directory_by_parent_id(db, target_item_id)
+                item_has_children = crud.get_directory_by_parent_id(db, target_item_id, user_id)
 
                 
                 # 아이템을 복사한 위치를 가져오기. target아이템의 parent_id에 해당하는 레코드의 path
@@ -2314,7 +2314,7 @@ async def copy_file(db: Session, target_item_id: str, target_destination_path: s
     """단일 파일 복사 프로세스를 함수로 만듦."""
     from db import crud
     # 아이템의 디렉토리 여부 가져오기.
-    item_is_directory = crud.get_file_is_directory_by_id(db, target_item_id)
+    item_is_directory = crud.get_file_is_directory_by_id(db, target_item_id, user_id)
     # target item의 기존 경로 가져오기
     target_item_original_path = crud.get_file_path_by_id(db, target_item_id, user_id)
     # 아이템의 기존 이름 가져오기
@@ -2322,7 +2322,7 @@ async def copy_file(db: Session, target_item_id: str, target_destination_path: s
     # 파일이 저장되어 있는 디렉토리 id 가져오기
     file_parent_id = crud.get_parent_id_by_id(db, target_item_id)
     # 아이템에게 자식이 있는지 여부
-    item_has_children = crud.get_directory_by_parent_id(db, target_item_id)
+    item_has_children = crud.get_directory_by_parent_id(db, target_item_id, user_id)
     
     # 아이템을 복사한 위치와 붙여넣기 하는 위치가 동일할 경우의 판단을 위해 target_item_original_path에서 파일 이름만 제거.
     target_item_original_path_without_name = target_item_original_path.replace(target_item_original_name, "").rstrip("/")
@@ -2435,7 +2435,7 @@ def copy_directory(db: Session, target_item_id: str, target_destination_path: st
     from db import crud
 
     # 아이템의 디렉토리 여부 가져오기.
-    item_is_directory = crud.get_file_is_directory_by_id(db, target_item_id)
+    item_is_directory = crud.get_file_is_directory_by_id(db, target_item_id, user_id)
     # target item의 기존 경로 가져오기
     target_item_original_path = crud.get_file_path_by_id(db, target_item_id, user_id)
     # 아이템의 기존 이름 가져오기
