@@ -239,7 +239,12 @@ def get_file_path_by_id(db: Session, item_id: any, user_id: int):
     """
     if isinstance(item_id, int):
         item_id = str(item_id)
-    return db.query(models.Directory).filter(models.Directory.id == item_id, models.Directory.owner_id == user_id).first().path
+    
+    if item_id == "root":
+        # root 디렉토리는 모든 유저가 공유하는 디렉토리이므로 유저 정보 없이 검색
+        return db.query(models.Directory).filter(models.Directory.id == item_id).first().path
+    else:
+        return db.query(models.Directory).filter(models.Directory.id == item_id, models.Directory.owner_id == user_id).first().path
 
 def get_file_name_by_id(db: Session, item_id: any, user_id: int):
     """아이템의 id로 해당 아이템 레코드에서 name 필드의 값을 가져온다.
