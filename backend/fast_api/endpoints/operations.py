@@ -54,7 +54,8 @@ async def stage_operation(
         OperationResponse: 준비된 작업 정보
     """
     try:
-        logger.info(f"Stage operation request from user {current_user.id}: {request.command}")
+        user_id = current_user.id
+        logger.info(f"Stage operation request from user {user_id}: {request.command}")
         # Extract language from Accept-Language header (default to 'ko')
         language = accept_language.split(',')[0].strip().lower() if accept_language else 'ko'
         logger.debug(f"🈯 Detected language from header: {language}")
@@ -110,7 +111,7 @@ async def stage_operation(
                 requiresConfirmation=result.requiresConfirmation,
                 riskLevel=result.riskLevel,
                 preview=dict(result.preview),
-                user_id=current_user.id,
+                user_id=user_id,
                 created_at=datetime.now().isoformat()
             )
             
@@ -161,7 +162,8 @@ async def execute_operation(
     Returns:
         ExecutionResponse: 실행 결과 정보
     """
-    logger.info(f"Execute operation {operation_id} for user {current_user.id}")
+    user_id = current_user.id
+    logger.info(f"Execute operation {operation_id} for user {user_id}")
     # debugging.stop_debugger()
     
     try:
@@ -176,8 +178,8 @@ async def execute_operation(
             )
         
         # 사용자 권한 확인
-        if operation_data.get("user_id") != current_user.id:
-            logger.warning(f"Unauthorized access attempt for operation {operation_id} by user {current_user.id}")
+        if operation_data.get("user_id") != user_id:
+            logger.warning(f"Unauthorized access attempt for operation {operation_id} by user {user_id}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="이 작업에 대한 권한이 없습니다"
@@ -240,7 +242,8 @@ async def cancel_operation(
     Returns:
         BasicResponse: 취소 결과 메시지
     """
-    logger.info(f"Cancel operation {operation_id} for user {current_user.id}")
+    user_id = current_user.id
+    logger.info(f"Cancel operation {operation_id} for user {user_id}")
     
     try:
         # Redis에서 작업 정보 조회
@@ -254,8 +257,8 @@ async def cancel_operation(
             )
         
         # 사용자 권한 확인
-        if operation_data.get("user_id") != current_user.id:
-            logger.warning(f"Unauthorized cancel attempt for operation {operation_id} by user {current_user.id}")
+        if operation_data.get("user_id") != user_id:
+            logger.warning(f"Unauthorized cancel attempt for operation {operation_id} by user {user_id}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="이 작업을 취소할 권한이 없습니다"
@@ -303,7 +306,8 @@ async def undo_operation(
     Returns:
         BasicResponse: 되돌리기 결과 메시지
     """
-    logger.info(f"Undo operation {operation_id} for user {current_user.id}, reason: {request.reason}")
+    user_id = current_user.id
+    logger.info(f"Undo operation {operation_id} for user {user_id}, reason: {request.reason}")
     
     try:
         # 실행되었던 작업 정보 조회 
@@ -321,8 +325,8 @@ async def undo_operation(
             )
         
         # 사용자 권한 확인
-        if undo_data.get("user_id") != current_user.id:
-            logger.warning(f"Unauthorized undo attempt for operation {operation_id} by user {current_user.id}")
+        if undo_data.get("user_id") != user_id:
+            logger.warning(f"Unauthorized undo attempt for operation {operation_id} by user {user_id}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="이 작업을 되돌릴 권한이 없습니다"
@@ -1863,7 +1867,7 @@ async def execute_operation_logic(operation_type: str, operation: dict, user_opt
 async def execute_move_logic(operation: dict, user_options: dict, current_user: User, db: Session) -> dict:
     """이동 작업 실행 로직"""
     from fast_api.endpoints.documents import process_directory_operations
-    
+    user_id = current_user.id
     targets = operation.get("targets", [])
     destination = operation.get("destination", "/")
     
@@ -1882,7 +1886,7 @@ async def execute_move_logic(operation: dict, user_options: dict, current_user: 
             })
         
         # 작업 실행
-        results = await process_directory_operations(operations, current_user.id, db)
+        results = await process_directory_operations(operations, user_id, db)
         
         # 결과 확인
         success_count = sum(1 for r in results if r.get("status") == "success")
@@ -1920,7 +1924,7 @@ async def execute_move_logic(operation: dict, user_options: dict, current_user: 
 async def execute_copy_logic(operation: dict, user_options: dict, current_user: User, db: Session) -> dict:
     """복사 작업 실행 로직"""
     from fast_api.endpoints.documents import process_directory_operations
-    
+    user_id = current_user.id
     targets = operation.get("targets", [])
     destination = operation.get("destination", "/")
     
@@ -1939,7 +1943,7 @@ async def execute_copy_logic(operation: dict, user_options: dict, current_user: 
             })
         
         # 작업 실행
-        results = await process_directory_operations(operations, current_user.id, db)
+        results = await process_directory_operations(operations, user_id, db)
         
         # 결과 확인
         success_count = sum(1 for r in results if r.get("status") == "success")
@@ -1976,7 +1980,7 @@ async def execute_copy_logic(operation: dict, user_options: dict, current_user: 
 async def execute_delete_logic(operation: dict, user_options: dict, current_user: User, db: Session) -> dict:
     """삭제 작업 실행 로직"""
     from fast_api.endpoints.documents import process_directory_operations
-    
+    user_id = current_user.id
     targets = operation.get("targets", [])
     
     logger.info(f"Deleting {len(targets)} files")
@@ -1992,7 +1996,7 @@ async def execute_delete_logic(operation: dict, user_options: dict, current_user
             })
         
         # 작업 실행
-        results = await process_directory_operations(operations, current_user.id, db)
+        results = await process_directory_operations(operations, user_id, db)
         
         # 결과 확인
         success_count = sum(1 for r in results if r.get("status") == "success")
@@ -2029,7 +2033,7 @@ async def execute_delete_logic(operation: dict, user_options: dict, current_user
 async def execute_rename_logic(operation: dict, user_options: dict, current_user: User, db: Session) -> dict:
     """이름 변경 작업 실행 로직"""
     from fast_api.endpoints.documents import process_directory_operations
-    
+    user_id = current_user.id
     # rename은 target이 배열이 아닌 단일 객체 또는 배열의 첫 번째 요소
     target = operation.get("target", {})
     if isinstance(target, list) and len(target) > 0:
@@ -2048,7 +2052,7 @@ async def execute_rename_logic(operation: dict, user_options: dict, current_user
         }]
         
         # 작업 실행
-        results = await process_directory_operations(operations, current_user.id, db)
+        results = await process_directory_operations(operations, user_id, db)
         
         # 결과 확인
         if results and results[0].get("status") == "success":
@@ -2083,7 +2087,7 @@ async def execute_rename_logic(operation: dict, user_options: dict, current_user
 async def execute_create_folder_logic(operation: dict, user_options: dict, current_user: User, db: Session) -> dict:
     """폴더 생성 작업 실행 로직"""
     from fast_api.endpoints.documents import process_directory_operations
-    
+    user_id = current_user.id
     folder_name = operation.get("folderName", "")
     parent_path = operation.get("parentPath", "/")
     
@@ -2099,7 +2103,7 @@ async def execute_create_folder_logic(operation: dict, user_options: dict, curre
         }]
         
         # 작업 실행
-        results = await process_directory_operations(operations, current_user.id, db)
+        results = await process_directory_operations(operations, user_id, db)
         
         # 결과 확인
         if results and results[0].get("status") == "success":
@@ -2136,7 +2140,7 @@ async def execute_search_logic(operation: dict, user_options: dict, current_user
     from rag.document_service import process_query
     from rag.llm import get_llms_answer
     from db.database import engine
-    
+    user_id = current_user.id
     search_term = operation.get("searchTerm", "")
     
     logger.info(f"Searching for: {search_term}")
@@ -2144,7 +2148,7 @@ async def execute_search_logic(operation: dict, user_options: dict, current_user
     try:
         # RAG 검색 실행
         # process_query는 유사한 문서 청크들을 반환
-        docs = process_query(db, current_user.id, search_term, engine)
+        docs = process_query(db, user_id, search_term, engine)
         
         # LLM을 통해 자연스러운 답변 생성
         answer = get_llms_answer(docs, search_term)
@@ -2203,6 +2207,7 @@ async def execute_summarize_logic(operation: dict, user_options: dict, current_u
     import boto3
     from config.settings import S3_BUCKET_NAME, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION
     
+    user_id = current_user.id
     targets = operation.get("targets", [])
     
     logger.info(f"Summarizing {len(targets)} documents")
@@ -2228,7 +2233,7 @@ async def execute_summarize_logic(operation: dict, user_options: dict, current_u
                 continue
             
             # S3 키 가져오기
-            s3_key = crud.get_s3_key_by_id(db, target_id)
+            s3_key = crud.get_s3_key_by_id(db, target_id, user_id)
             
             if not s3_key:
                 logger.warning(f"S3 key not found for document {target_id}")
