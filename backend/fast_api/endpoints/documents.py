@@ -227,6 +227,7 @@ async def upload_document(
                 # debugging.stop_debugger()
                 # 파일 업로드 처리
                 file_results = await process_file_uploads(files, current_upload_path, current_user, db)
+                # debugging.stop_debugger()
                 results["items"].extend(file_results)
             else:
                 # 디렉토리 업로드인 경우
@@ -643,8 +644,11 @@ async def process_file_uploads(files, current_upload_path, current_user, db):
             # debugging.stop_debugger()
 
             # file_path_dir가 db-> directories 테이블에 존재하면 그 레코드에서 id값을 가져온다.
-            # 디버그 통과 v
-            parent_id = crud.get_directory_id_by_path(db, file_path_dir, user_id)
+            # 만약 file_path_dir가 '/'이면, 즉 루트위치에 업로드 하는 것이라면 prent_id는 무조건 "root". -> issue 97 comment check
+            if file_path_dir == "/":
+                parent_id = "root"
+            else:
+                parent_id = crud.get_directory_id_by_path(db, file_path_dir, user_id)
             # debugging.stop_debugger()
 
             # 파일 업로드 처리 시작
@@ -768,7 +772,11 @@ async def process_directory_operations(operations, user_id: int, db):
                 # target item의 타입 가져오기
                 target_item_type = crud.get_file_is_directory_by_id(db, reserved_item_id, user_id)
                 # 목적지의 id값 가져오기
-                destination_id = crud.get_directory_id_by_path(db, new_path, user_id)
+                # new_path가 "/"인 경우, 분기 -> issue 97 comment check
+                if new_path == "/":
+                    destination_id = "root"
+                else:
+                    destination_id = crud.get_directory_id_by_path(db, new_path, user_id)
 
                 # target item의 새로운 parent_id 준비
                 target_new_parent_id = destination_id
@@ -1567,7 +1575,10 @@ async def process_directory_operations(operations, user_id: int, db):
                             # 아이템의 기존 경로에서 기존 이름을 새 이름으로 replace.
                             target_item_new_path = target_item_original_path.replace(target_item_original_name, target_item_new_name)
                             # 디렉토리의 새 부모 설정
-                            target_item_new_parent_id = crud.get_directory_id_by_path(db, target_destination_path, user_id)
+                            if target_destination_path == "/": # -> issue 97 comment check
+                                target_item_new_parent_id = "root"
+                            else:
+                                target_item_new_parent_id = crud.get_directory_id_by_path(db, target_destination_path, user_id)
 
                             # 저장될 데이터를 일반화
                             id = new_directory_id
@@ -1862,7 +1873,11 @@ def process_top_directory(tree, current_upload_path: str, db: Session, user_id: 
         # 현재 사용자가 업로드 하는 경로가 루트가 아닌 특정한 경로인 경우
         top_dir_path = current_upload_path+"/"+top_dir_name
     
-    parent_id = crud.get_directory_id_by_path(db, current_upload_path, user_id)
+    # 업로드 위치가 루트인 경우 분기 처리 -> issue 97 comment check
+    if current_upload_path == "/":
+        parent_id = "root"
+    else:
+        parent_id = crud.get_directory_id_by_path(db, current_upload_path, user_id)
 
     if parent_id is None:
         # 루트 위치에 업로드 하는 경우
@@ -2474,7 +2489,11 @@ def copy_directory(db: Session, target_item_id: str, target_destination_path: st
         # 아이템의 기존 경로에서 기존 이름을 새 이름으로 replace.
         target_item_new_path = target_item_original_path.replace(target_item_original_name, target_item_new_name)
         # 디렉토리의 새 부모 설정
-        target_item_new_parent_id = crud.get_directory_id_by_path(db, target_destination_path, user_id)
+        # 목적지가 루트인 경우 분기 -> issue 97 comment check
+        if target_destination_path == "/":
+            target_item_new_parent_id = "root"
+        else:
+            target_item_new_parent_id = crud.get_directory_id_by_path(db, target_destination_path, user_id)
 
         # 저장될 데이터를 일반화
         id = new_directory_id
