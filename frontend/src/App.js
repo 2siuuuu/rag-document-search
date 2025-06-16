@@ -419,7 +419,7 @@ function AppContent() {
       // 인증 상태를 먼저 설정 (토큰이 있으면 일단 인증된 것으로 간주)
       setIsAuthenticated(true);
       
-      const response = await axios.get(`${API_BASE_URL}/user/profile`, {
+      const response = await axios.get(`${API_BASE_URL}/users/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

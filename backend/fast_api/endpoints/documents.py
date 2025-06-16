@@ -13,8 +13,7 @@ from debug import debugging
 from db.database import get_db, engine
 from db.models import User
 from fast_api.security import get_current_user
-from rag.document_service import get_all_documents, process_document, process_query
-from rag.llm import get_llms_answer
+from rag.document_service import process_document
 from config.settings import AWS_SECRET_ACCESS_KEY,S3_BUCKET_NAME,AWS_ACCESS_KEY_ID,AWS_DEFAULT_REGION  # 설정 임포트
 import os
 import logging
@@ -46,52 +45,7 @@ if not S3_BUCKET_NAME:
 
 router = APIRouter()
 
-''' 함수 인덱스
-
-# 디버깅 stop 시 다음 코드 강제 실행 불가하도록 하는 함수.
-#stop_debugger()
-
-get("/")
-list_items
-
-post("/manage")
-upload_document
-
-get("/structure")
-get_filesystem_structure
-
-post("/query")
-query_document
-
-디렉토리 업로드 처리
-process_directory_uploads
-
-파일 업로드 처리
-process_file_uploads
-
-디렉토리 작업 처리(생성, 이동, 삭제 등)
-process_directory_operations
-
-파일 타입 유추
-get_file_type
-
-고유 파일명 생성
-generate_unique_filename
-
-최상위 디렉토리 처리
-process_top_directory
-
-디렉토리 테이블에 디렉토리 정보를 저장
-store_directory_table
-
-파일 이름 추출
-set_filename
-
-파일 경로 설정
-set_file_path
-
-s3 업로드
-upload_file_to_s3
+''' 엔드포인트 설명:
 
 '''
 
@@ -115,7 +69,7 @@ async def list_items(
         # 루트 디렉토리가 존재하지 않으면 생성하고, 존재하면 아무 작업도 하지 않는다.
         if not crud.get_directory_by_id(db, "root", user_id):
             # 루트 디렉토리 생성
-            crud.create_directory(db, "root", "Home", "/", True, None, datetime.now(), user_id)
+            crud.create_directory(db, "root", "Home", "/", True, None, datetime.now(), None)
 
         # 프론트 엔드에서 선택한 경로
             # 만약 최초 로그인 시 프론트 엔드에서 잘못된 경로('')를 전송한다면
@@ -210,7 +164,7 @@ async def upload_document(
     
     # path는 사용자가 유저 인터페이스 창에서 선택한 경로이다.
     current_upload_path = path
-    # debugging.stop_debugger()
+    debugging.stop_debugger()
     try:
         results = {
             "success": True,
@@ -256,73 +210,73 @@ async def upload_document(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error managing documents: {str(e)}")
 
-@router.get("/structure")
-async def get_filesystem_structure(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    전체 파일 시스템 구조 반환
-    """
-    # get_filesystem_structure 엔드포인트와 "/"엔드포인트가 프론트엔드 입장에서 어떤 차이를 가지는지 알아보기.
-    from db import crud
-    try:
-        user_id = current_user.id
+# @router.get("/structure")
+# async def get_filesystem_structure(
+#     current_user: User = Depends(get_current_user),
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     전체 파일 시스템 구조 반환
+#     """
+#     # get_filesystem_structure 엔드포인트와 "/"엔드포인트가 프론트엔드 입장에서 어떤 차이를 가지는지 알아보기.
+#     from db import crud
+#     try:
+#         user_id = current_user.id
 
-        # 루트 디렉토리 존재여부 확인 및 생성
-        # 루트 디렉토리가  
-        # 존재하면 아무 작업도 하지 않는다.
-        if not crud.get_directory_by_id(db, "root", user_id):
-            # 존재하지 않으면 루트 디렉토리 생성
-            crud.create_directory(db, "root", "Home", "/", True, None, datetime.now(), user_id)
+#         # 루트 디렉토리 존재여부 확인 및 생성
+#         # 루트 디렉토리가  
+#         # 존재하면 아무 작업도 하지 않는다.
+#         if not crud.get_directory_by_id(db, "root", user_id):
+#             # 존재하지 않으면 루트 디렉토리 생성
+#             crud.create_directory(db, "root", "Home", "/", True, None, datetime.now(), user_id)
 
-        # 디렉토리만 필터링. 디렉토리 구조만 보내면 됨.
-        directories = crud.get_only_directory(db, user_id)
+#         # 디렉토리만 필터링. 디렉토리 구조만 보내면 됨.
+#         directories = crud.get_only_directory(db, user_id)
 
-        # <로직>
+#         # <로직>
        
 
-        # 2) 새 리스트에 수정된 객체 생성
-        your_result = []
-        for d in directories:
-            # 루트 디렉토리는 제외.( 루트 디렉토리는 프론트엔드에서 처리해준다.)
-            # db입장에서 필요한 데이터이지만 프론트 엔드로 해당 정보를 보낼 시 이미 프론트엔드에서 처리하기 때문에 충돌이 발생하여 버그가 발생함.
-            if d['id'] == "root":
-                continue
-            your_result.append({
-                'id':   d['id'],
-                'name': d['name'],
-                'path': d['path']
-            })
-        # </로직>
-        directories = your_result
+#         # 2) 새 리스트에 수정된 객체 생성
+#         your_result = []
+#         for d in directories:
+#             # 루트 디렉토리는 제외.( 루트 디렉토리는 프론트엔드에서 처리해준다.)
+#             # db입장에서 필요한 데이터이지만 프론트 엔드로 해당 정보를 보낼 시 이미 프론트엔드에서 처리하기 때문에 충돌이 발생하여 버그가 발생함.
+#             if d['id'] == "root":
+#                 continue
+#             your_result.append({
+#                 'id':   d['id'],
+#                 'name': d['name'],
+#                 'path': d['path']
+#             })
+#         # </로직>
+#         directories = your_result
 
-        return {
-            "directories": directories}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching filesystem structure: {str(e)}")
+#         return {
+#             "directories": directories}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error fetching filesystem structure: {str(e)}")
 
-@router.post("/query")
-async def query_document(
-    query: str = Form(...), 
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+# @router.post("/query")
+# async def query_document(
+#     query: str = Form(...), 
+#     current_user: User = Depends(get_current_user),
+#     db: Session = Depends(get_db)
+# ):
 
-    """문서 질의응답 엔드포인트"""
-    from db.database import engine  # 기존 엔진을 임포트
-    # debugging.stop_debugger()
-    user_id = current_user.id
+#     """문서 질의응답 엔드포인트"""
+#     from db.database import engine  # 기존 엔진을 임포트
+#     # debugging.stop_debugger()
+#     user_id = current_user.id
 
-    pass
+#     pass
 
 
-    # docs = process_query(user_id,query,engine)
+#     # docs = process_query(user_id,query,engine)
     
-    # answer = get_llms_answer(docs, query)
+#     # answer = get_llms_answer(docs, query)
 
 
-    # return {"answer": answer} 
+#     # return {"answer": answer} 
 
 # 단일 파일 다운로드 엔드포인트 생성 위치
 
@@ -765,6 +719,7 @@ async def process_directory_operations(operations, user_id: int, db):
                 new_path = reserved_path
                 # target item의 parent_id 가져오기
                 target_item_parent_id = crud.get_parent_id_by_id(db, reserved_item_id, user_id)
+                
                 # target item의 기존 경로 가져오기
                 target_item_path = crud.get_file_path_by_id(db, reserved_item_id, user_id)
                 # target item의 기존 이름 가져오기
@@ -777,6 +732,8 @@ async def process_directory_operations(operations, user_id: int, db):
                     destination_id = "root"
                 else:
                     destination_id = crud.get_directory_id_by_path(db, new_path, user_id)
+                
+                debugging.stop_debugger()
 
                 # target item의 새로운 parent_id 준비
                 target_new_parent_id = destination_id
@@ -801,7 +758,8 @@ async def process_directory_operations(operations, user_id: int, db):
                                             "name": target_item_name,
                                             "old_path": target_item_path,
                                             "new_path": target_new_path,
-                                            "status": "success"})                            
+                                            "status": "success"})
+                            debugging.stop_debugger()
                         else:
                             # 하위 아이템이 존재하지 않는 경우
                             # 디렉토리 경로 및 부모 id 업데이트
@@ -814,6 +772,7 @@ async def process_directory_operations(operations, user_id: int, db):
                                             "old_path": target_item_path,
                                             "new_path": target_new_path,
                                             "status": "success"})
+                            debugging.stop_debugger()
                             
 
                     else:
@@ -841,6 +800,7 @@ async def process_directory_operations(operations, user_id: int, db):
                             target_new_path = new_path + target_item_path.replace(parent_item_path, "")
                             # 디렉토리 경로 및 부모 id 업데이트
                             # 하위 아이템이 존재하는 경우에는 sql 스크립트를 실행. (자식 아이템까지 재귀적으로 처리됨.)
+                            debugging.stop_debugger()
                             crud.update_directory_with_sql_file_safe(db, reserved_item_id, target_item_path, target_new_path, target_new_parent_id, user_id)
                             results.append({
                                             "operation": "move",
@@ -855,6 +815,7 @@ async def process_directory_operations(operations, user_id: int, db):
                             # target item의 새로운 경로 준비
                             target_new_path = new_path + '/' + target_item_name
                             # 디렉토리 경로 및 부모 id 업데이트
+                            debugging.stop_debugger()
                             crud.update_directory_path_and_parent(db, reserved_item_id, target_new_path, target_new_parent_id, user_id)
                             results.append({
                                             "operation": "move",
@@ -863,7 +824,8 @@ async def process_directory_operations(operations, user_id: int, db):
                                             "name": target_item_name,
                                             "old_path": target_item_path,
                                             "new_path": target_new_path,
-                                            "status": "success"})                            
+                                            "status": "success"})
+                            
                     else:
                         # new_path가 root인 경우
                         if target_item_children:
@@ -872,6 +834,7 @@ async def process_directory_operations(operations, user_id: int, db):
                             target_new_path = target_item_path.replace(parent_item_path, "")
                             # 디렉토리 경로 및 부모 id 업데이트
                             # 하위 아이템이 존재하는 경우에는 sql 스크립트를 실행. (자식 아이템까지 재귀적으로 처리됨.)
+                            debugging.stop_debugger()
                             crud.update_directory_with_sql_file_safe(db, reserved_item_id, target_item_path, target_new_path, target_new_parent_id, user_id)                            
                             results.append({
                                             "operation": "move",
@@ -886,6 +849,7 @@ async def process_directory_operations(operations, user_id: int, db):
                             # target item의 새로운 경로 준비
                             target_new_path = new_path + target_item_name
                             # 디렉토리 경로 및 부모 id 업데이트
+                            debugging.stop_debugger()
                             crud.update_directory_path_and_parent(db, reserved_item_id, target_new_path, target_new_parent_id, user_id)
                             results.append({
                                             "operation": "move",
