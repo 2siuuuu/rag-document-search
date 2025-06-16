@@ -28,7 +28,12 @@ const Sidebar = ({ className, directories, currentPath, setCurrentPath, onRefres
 
   const handleDirectoryClick = (path) => {
     setCurrentPath(path);
-    // 모바일 환경에서 디렉토리 클릭시 사이드바 닫기
+    
+    if (path === "/" && onRefresh) {
+      console.log("🏠 홈 디렉토리 클릭 - 데이터 새로고침 실행");
+      onRefresh();
+    }
+    
     if (window.innerWidth <= 768) {
       closeSidebar();
     }
