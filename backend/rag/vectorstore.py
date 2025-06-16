@@ -1,7 +1,7 @@
 from rag.embeddings import get_embeddings
 
 
-def save_to_vector_store(db, documents, file_name, file_path, user_id):
+def save_to_vector_store(db, documents, file_name, file_path, user_id: int):
     """문서를 PostgreSQL 벡터 스토어에 저장합니다."""
     from db.database import SessionLocal
     from db import crud
@@ -39,6 +39,7 @@ def save_to_vector_store(db, documents, file_name, file_path, user_id):
                     db=db,
                     document_id=document.id,
                     content=content,
+                    user_id=user_id,
                     embedding=embedding_vector
                 )
                 # 임베딩 비동기 처리
