@@ -86,11 +86,11 @@ async def load_hwp(file_content, file_extension="hwp"):
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as hwp_temp:
         hwp_temp.write(file_content)
         hwp_path = hwp_temp.name
-    debugging.stop_debugger()
+    # debugging.stop_debugger()
     # 텍스트 출력용 임시 파일
     with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as txt_temp:
         txt_path = txt_temp.name
-    debugging.stop_debugger()
+    # debugging.stop_debugger()
     try:
         print(f"Running hwp5txt on temporary file with output to {txt_path}")
         subprocess.run(['hwp5txt', hwp_path, '--output', txt_path], check=True)
@@ -118,7 +118,7 @@ async def load_hwp(file_content, file_extension="hwp"):
             documents = [text[i:i+page_size] for i in range(0, len(text), page_size)]
         
         print(f"HWP 문서를 {len(documents)}개의 페이지로 분할했습니다.")
-        debugging.stop_debugger()
+        # debugging.stop_debugger()
         return documents
     except Exception as e:
         print(f"{file_extension.upper()} 파일 처리 중 오류 발생: {str(e)}")

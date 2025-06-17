@@ -831,8 +831,9 @@ def get_description(command, context, destination='/', operation_type="default",
     
     # destination에서 create_folder 제거 (있다면)
     clean_destination = destination
-    if destination.startswith('create_folder/'):
-        clean_destination = destination.replace('create_folder/', '', 1)
+    if not destination == None:
+        if destination.startswith('create_folder/'):
+            clean_destination = destination.replace('create_folder/', '', 1)
     
     prompt_template = """
         <Instructions>
@@ -1736,8 +1737,8 @@ Rules for description generation:
    - List all file names, removing extensions
 
 3. For many files (more than 3):
-   - Korean: "선택한 {count}개 문서의 주요 내용을 요약합니다."
-   - English: "Summarize the main content of {count} selected documents."
+   - Korean: "선택한 {file_count}개 문서의 주요 내용을 요약합니다."
+   - English: "Summarize the main content of {file_count} selected documents."
 
 Important notes:
 - Remove file extensions from names for cleaner sentences
@@ -1877,6 +1878,9 @@ async def execute_move_logic(operation: dict, user_options: dict, current_user: 
         # process_directory_operations 형식에 맞게 데이터 준비
         operations = []
         for target in targets:
+            if not destination.startswith('/'):
+                destination = "/" + destination
+
             operations.append({
                 "operation_type": "move",
                 "item_id": target.get("id"),
@@ -1884,7 +1888,7 @@ async def execute_move_logic(operation: dict, user_options: dict, current_user: 
                 "target_path": destination,
                 "path": destination  # target_path와 path 둘 다 사용하는 경우를 위해
             })
-        
+        # debugging.stop_debugger()
         # 작업 실행
         results = await process_directory_operations(operations, user_id, db)
         
@@ -2186,7 +2190,7 @@ async def execute_search_logic(operation: dict, user_options: dict, current_user
         )
         
         return {
-            "message": f"'{search_term}' 검색이 완료되었습니다",
+            "message": f"{search_result_data.answer}",
             "undoAvailable": False,  # 검색은 undo 불필요
             "searchResults": search_result_data
         }
@@ -2275,7 +2279,7 @@ async def execute_summarize_logic(operation: dict, user_options: dict, current_u
                 )
                 
                 prompt = PromptTemplate.from_template(
-                    """다음 문서의 내용을 한국어로 요약해주세요. 핵심 내용을 중심으로 3-5개의 문장으로 요약하세요.
+                    """다음 문서의 내용을 영어로 요약해주세요. 핵심 내용을 중심으로 3-5개의 문장으로 요약하세요.
                     
                     문서명: {document_name}
                     
@@ -2318,7 +2322,7 @@ async def execute_summarize_logic(operation: dict, user_options: dict, current_u
         ]
         
         return {
-            "message": message,
+            "message": summary_data_list[0].summary,
             "undoAvailable": False,  # 요약은 undo 불필요
             "summaries": summary_data_list
         }
