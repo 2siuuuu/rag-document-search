@@ -164,7 +164,7 @@ async def upload_document(
     
     # path는 사용자가 유저 인터페이스 창에서 선택한 경로이다.
     current_upload_path = path
-    # debugging.stop_debugger()
+    debugging.stop_debugger()
     try:
         results = {
             "success": True,
@@ -916,7 +916,8 @@ async def process_directory_operations(operations, user_id: int, db):
                 target_item_original_path = crud.get_file_path_by_id(db, reserved_item_id, user_id)                
 
                 # target item의 parent_id 가져오기
-                target_item_parent_id = crud.get_parent_id_by_id(db, reserved_item_id, user_id)                
+                target_item_parent_id = crud.get_parent_id_by_id(db, reserved_item_id, user_id)
+                # debugging.stop_debugger()     
 
 
                 if item_is_directory:
@@ -932,6 +933,7 @@ async def process_directory_operations(operations, user_id: int, db):
                         # 타겟의 새로운 경로
                         item_new_path = target_item_original_path.replace(target_item_original_name, reserved_item_new_name)
                         crud.update_directory_and_child_dirs(db, reserved_item_id, target_item_original_path, reserved_item_new_name, item_new_path, user_id)
+                        # debugging.stop_debugger()
 
                         if child_file_ids:
                             # 파일 처리 (비동기)
@@ -945,6 +947,7 @@ async def process_directory_operations(operations, user_id: int, db):
                                 # 파일이 저장되어 있는 디렉토리 id 가져오기
                                 file_parent_id = crud.get_parent_id_by_id(db, file_id, user_id)
                                 print(f"처리 중인 파일 ID: {file_id}")  # 예시: 로그 출력
+                                # debugging.stop_debugger()
                                 # 비동기 함수(코루틴 객체) 생성
                                 task = edit_path_and_reupload_document(
                                     db, user_id, file_id, file_original_name, target_item_original_name, reserved_item_new_name, file_original_path,
