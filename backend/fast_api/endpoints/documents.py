@@ -869,6 +869,7 @@ async def process_directory_operations(operations, user_id: int, db):
                 item_path = crud.get_file_path_by_id(db, reserved_item_id, user_id)
                 # 자식이 포함되어 있는지 여부 확인을 위한 조사.
                 item_has_children = crud.get_directory_by_parent_id(db, reserved_item_id, user_id)
+                # debugging.stop_debugger()
 
                 if item_is_directory:# 디렉토리인 경우
                     if item_has_children:# 자식이 존재할 경우
@@ -880,9 +881,11 @@ async def process_directory_operations(operations, user_id: int, db):
                             file_original_name = crud.get_file_name_by_id(db, file_id, user_id)
                             # 파일의 기존 경로 가져오기
                             file_original_path = crud.get_file_path_by_id(db, file_id, user_id)
+                            # debugging.stop_debugger()
                             # s3와 db에서 삭제.
                             results.append(delete_file(db, file_id, file_original_name, file_original_path, s3_client, user_id))
                         # 디렉토리 재귀적 전부 삭제.
+                        # debugging.stop_debugger()
                         results.append(delete_directory(db, reserved_item_id, item_name, item_path, user_id))
 
 

@@ -200,6 +200,8 @@ def delete_directory_by_id(db: Session, directory_id: str, user_id: int):
 def delete_document_by_id(db: Session, document_id: int, user_id: int):
     """파일 id로 테이블에서 파일 정보를 document_chunks테이블, documents테이블, directories테이블 순으로 삭제한다."""
     try:
+        if isinstance(document_id, str):
+            document_id = int(document_id)        
         # 먼저 해당 document가 현재 사용자의 것인지 확인
         document = db.query(models.Document).filter(models.Document.id == document_id, models.Document.user_id == user_id).first()
         if not document:
@@ -213,12 +215,12 @@ def delete_document_by_id(db: Session, document_id: int, user_id: int):
         
         db.execute(
             text("DELETE FROM documents WHERE id = :doc_id AND user_id = :user_id"),
-            {"doc_id": document_id, "user_id":user_id}
+            {"doc_id": document_id, "user_id": user_id}
         )
         
         db.execute(
             text("DELETE FROM directories WHERE id = CAST(:doc_id AS TEXT) AND owner_id = :user_id"),
-            {"doc_id": document_id, "owner_id":user_id}
+            {"doc_id": document_id, "user_id": user_id}
         )
         
         db.commit()
@@ -303,7 +305,7 @@ def update_directory_with_sql_file_safe(db: Session, item_id: str, target_item_p
     """
     db.execute(
         text(update_parent_sql),
-        {"tgt_id": item_id, "new_parent_id": target_new_parent_id, "user_id":user_id}
+        {"tgt_id": item_id, "new_parent_id": target_new_parent_id, "user_id": user_id}
     )
     
     # 2. 경로 업데이트를 위한 재귀 쿼리
@@ -463,7 +465,7 @@ def update_directory_and_child_dirs(
     """
     db.execute(
         text(update_target_sql),
-        {"new_name": new_name, "new_path": new_path, "target_id": target_id, "owner_id":user_id}
+        {"new_name": new_name, "new_path": new_path, "target_id": target_id, "owner_id": user_id}
     )
 
     # 2. 자식 디렉토리들(is_directory=True)의 path 일괄 변경 (재귀)
