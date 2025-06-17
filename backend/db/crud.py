@@ -465,7 +465,7 @@ def update_directory_and_child_dirs(
     """
     db.execute(
         text(update_target_sql),
-        {"new_name": new_name, "new_path": new_path, "target_id": target_id, "owner_id": user_id}
+        {"new_name": new_name, "new_path": new_path, "target_id": target_id, "user_id": user_id}
     )
 
     # 2. 자식 디렉토리들(is_directory=True)의 path 일괄 변경 (재귀)
