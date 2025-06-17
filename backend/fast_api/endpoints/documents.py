@@ -164,7 +164,7 @@ async def upload_document(
     
     # path는 사용자가 유저 인터페이스 창에서 선택한 경로이다.
     current_upload_path = path
-    debugging.stop_debugger()
+    # debugging.stop_debugger()
     try:
         results = {
             "success": True,
@@ -996,7 +996,12 @@ async def process_directory_operations(operations, user_id: int, db):
                 reserved_path
                 reserved_item_id
                 """
-
+                # 프론트 엔드에서 오는 target_path의 의미는 destination_path임. 프론트엔드에서 오는 변수명 수정 필요.
+                reserved_path = op.get("target_path", None)
+                # 목적지 경로가 루트일 경우 ""를 전달하는 오류를 임시로 해결.
+                if reserved_path == "":
+                    reserved_path = '/'
+                
                 target_item_id = reserved_item_id
                 target_destination_path = reserved_path
 
@@ -1014,7 +1019,7 @@ async def process_directory_operations(operations, user_id: int, db):
                 
                 # 아이템을 복사한 위치를 가져오기. target아이템의 parent_id에 해당하는 레코드의 path
                 target_item_copied_path = crud.get_file_path_by_id(db, crud.get_parent_id_by_id(db, target_item_id, user_id), user_id)
-               
+                # debugging.stop_debugger()
                 # 파일인지 디렉토리인지 판단
                 if item_is_directory:# 디렉토리인 경우
                     if item_has_children: # 자식 아이템이 존재하는 경우
@@ -1359,6 +1364,7 @@ async def process_directory_operations(operations, user_id: int, db):
                                     # 1. 경로 부분 변경, 2. 기존 파일 이름을 새 파일 이름으로 교체.
                                 child_file_new_path = child_file_original_path.replace(parent_path_of_target,"").replace(child_file_original_name,child_file_new_name)
                                 child_file_new_parent_id = crud.get_directory_id_by_path(db,child_file_new_path.replace("/"+child_file_new_name,""), user_id)
+                                # debugging.stop_debugger()
                                 # s3로 복사
                                 # 버킷 내 다른 위치로 파일 복사
                                 s3_client.copy_object(
@@ -1486,10 +1492,10 @@ async def process_directory_operations(operations, user_id: int, db):
                                 # 파일의 기존 경로 가져오기
                                 child_file_original_path = crud.get_file_path_by_id(db, child_file, user_id)
                                     # 1. 경로 부분 변경, 2. 기존 파일 이름을 새 파일 이름으로 교체.  <-여기서 오류날 것. 여기서부터 다시 테스트.
-                                child_file_new_path = child_file_original_path.replace(parent_path_of_target,target_destination_path,1).replace(child_file_original_name,child_file_new_name,1)
+                                child_file_new_path = child_file_original_path.replace(parent_path_of_target,target_destination_path+'/',1).replace(child_file_original_name,child_file_new_name,1)
                                 
                                 child_file_new_parent_id = crud.get_directory_id_by_path(db,child_file_new_path.replace("/"+child_file_new_name,"",1), user_id)
-                                
+                                # debugging.stop_debugger()
                                 # s3로 복사
                                 # 버킷 내 다른 위치로 파일 복사
                                 s3_client.copy_object(
