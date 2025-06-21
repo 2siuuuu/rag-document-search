@@ -2279,7 +2279,7 @@ async def execute_summarize_logic(operation: dict, user_options: dict, current_u
                 )
                 
                 prompt = PromptTemplate.from_template(
-                    """다음 문서의 내용을 영어로 요약해주세요. 핵심 내용을 중심으로 3-5개의 문장으로 요약하세요.
+                    """다음 문서의 내용을 한국어로 요약해주세요. 핵심 내용을 중심으로 3-5개의 문장으로 요약하세요.
                     
                     문서명: {document_name}
                     

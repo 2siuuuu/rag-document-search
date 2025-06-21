@@ -1,3 +1,57 @@
+# After
+
+> # 2025 캡스톤 디자인 
+> ## Team 멋진러닝
+<table>
+<thead>
+<tr>
+<th align="center"><strong>이수</strong></th>
+<th align="center"><strong>이호련</strong></th>
+<th align="center"><strong>박태승</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"><a href="https://github.com/2siuuuu"><img src="https://github.com/2siuuuu.png" height="150" width="150" style="max-width: 100%;"> <br> @2siuuuu</a></td>
+<td align="center"><a href="https://github.com/HoRyun"><img src="https://github.com/HoRyun.png" height="150" width="150" style="max-width: 100%;"> <br> @HoRyun</a></td>
+<td align="center"><a href="https://github.com/dpuw316"><img src="https://github.com/dpuw316.png" height="150" width="150" style="max-width: 100%;"> <br> @dpuw316</a></td>
+
+</tr>
+<tr>
+<td align="center"><strong>Backend</strong></td>
+<td align="center"><strong>Cloud & CI/CD PipeLine</strong></td>
+<td align="center"><strong>Frontend</strong></td>
+
+</tr>
+</tbody>
+</table>
+
+</br>
+
+# 프로젝트 이름: RAG 기반 AI 지능형 문서 관리 시스템
+
+</br>
+Retrieval-Augmented Generation(RAG) 기술을 활용한 문서 검색 및 질의응답 시스템입니다. 사용자는 문서를 업로드하고 챗봇에게 해당 문서에 관련된 질문을 할 수 있습니다.
+또한 자연어 명령으로 파일 관리 작업을 할 수 있습니다.
+
+</br>
+
+# 주요 기능
+</br>
+|  기능 구분  |  기능 명  |
+|  -------  |  ----------  |
+|유저|회원가입|
+||로그인|
+|문서|문서 업로드|
+||문서 다운로드|
+||요약|
+||검색|
+||기타 파일 관리 작업(폴더 생성, 복사, 잘라내기, 삭제, 이름 변경)|
+
+---
+
+# Before
+
 [![RAG Document Search Frontend CI/CD Pipeline](https://github.com/HoRyun/rag-document-search/actions/workflows/frontend-ci-cd.yml/badge.svg)](https://github.com/HoRyun/rag-document-search/actions/workflows/frontend-ci-cd.yml)
 
 # RAG Document Search
@@ -19,9 +73,9 @@ Retrieval-Augmented Generation(RAG) 기술을 활용한 문서 검색 및 질의
 
 ### 백엔드
 
-- **FastAPI**: 고성능 Python 기반 API 프레임워크
-- **LangChain**: LLM 애플리케이션 개발 프레임워크
-- **PostgreSQL (AWS RDS)**: 관계형 데이터베이스 및 벡터 확장 활용
+- **FastAPI**
+- **LangChain**
+- **PostgreSQL (AWS RDS)**
 - **Redis** 
 
 ### 프론트엔드
